@@ -1,1 +1,1 @@
-# CS344-Principles-of-Information-DataManagement
+# CS336-Principles-of-Information-DataManagement
