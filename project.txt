@@ -1,0 +1,502 @@
+part 1
+1.
+precinct->geo,locality,state
+precinct,Timestamp->totalvotes, Biden, Trump, filestamp
+2.
+penna is not in BCNF
+R(ID, Timestamp, state, locality, precinct, geo, totalvotes, Biden, Trump, filestamp)
+with fds
+precinct->geo,locality,state
+precinct,Timestamp->totalvotes, Biden, Trump, filestamp which violates BCNF
+decompose R to
+R1(precinct,geo,locality,state)
+with fd precinct->geo,locality,state
+is in BCNF
+and
+R2(precinct, Timestamp,totalvotes, Biden, Trump, filestamp, ID)
+with fd precinct,Timestamp->totalvotes, Biden, Trump, filestamp,ID
+is in BCNF
+
+part2
+1)
+a.
+delimiter //
+create procedure Winner(in given_precinct varchar(50))
+begin
+select 'Biden' as 'Winner', Biden/totalvotes*100 as 'percentage in %', totalvotes from penna where precinct = given_precinct
+and Timestamp in (select max(Timestamp) from penna where precinct = given_precinct) and exists(
+select * from penna where precinct = given_precinct and Biden > Trump and Timestamp in 
+(select max(Timestamp) from penna where precinct = given_precinct))
+union
+select 'Trump' as 'Winner', Trump/totalvotes*100 as 'percentage in %', totalvotes from penna where precinct = given_precinct
+and Timestamp in (select max(Timestamp) from penna where precinct = given_precinct) and exists(
+select * from penna where precinct = given_precinct and Trump > Biden and Timestamp in 
+(select max(Timestamp) from penna where precinct = given_precinct));
+end
+//
+
+b.
+create procedure RankAll(in given_precinct varchar(50))
+begin
+declare this_maxvotes int;
+select max(totalvotes) into this_maxvotes from penna where precinct = given_precinct;
+select count(*)+1 as 'rank' from (select * from (select max(totalvotes), precinct from penna group by precinct)
+where totalvotes > this_maxvotes 
+and Timestamp in 
+(select max(Timestamp) from penna where precinct = given_precinct)) a;
+end
+//
+
+c.
+create procedure RankCounty(in given_precinct varchar(50))
+begin
+declare this_maxvotes int;
+declare this_locality varchar(50);
+select distinct locality into this_locality from penna where precinct = given_precinct;
+select max(totalvotes) into this_maxvotes from penna where precinct = given_precinct;
+select count(*)+1 as 'rank' from (select * from penna where totalvotes > this_maxvotes
+and locality = this_locality and Timestamp in 
+(select max(Timestamp) from penna where precinct = given_precinct)) a;
+end
+//
+
+d.
+create procedure PlotPrecinct(in given_precinct varchar(50))
+begin
+select Timestamp, totalvotes, Trump, Biden from penna where precinct = given_precinct order by Timestamp;
+end
+//
+call PlotPrecinct('Upper Salford');//
+
+e.
+create procedure EarliestPrecinct(in vote_count int)
+begin
+declare min_Timestamp datetime;
+select Timestamp into min_Timestamp from penna where totalvotes >= vote_count order by Timestamp limit 1;
+select precinct from penna where Timestamp = min_Timestamp and totalvotes >= vote_count
+order by totalvotes limit 1;
+end
+//
+
+2)
+a.
+create procedure PrecinctsWon(in candidate varchar(50))
+begin
+if candidate = 'Trump'
+then
+select precinct, max(Trump)-max(Biden) as vote_diff, max(Trump) from penna 
+where Trump > Biden group by precinct order by vote_diff;
+else
+select precinct, max(Biden)-max(Trump) as vote_diff, max(Biden) from penna 
+where Biden > Trump group by precinct order by vote_diff;
+end if;
+end
+//
+
+b.
+create procedure PrecinctsWonCount(in candidate varchar(50))
+begin
+if candidate = 'Trump'
+then
+select count(*) as won_count from penna where Trump > Biden group by precinct;
+else
+select count(*) as won_count from penna where Biden > Trump group by precinct;
+end if;
+end
+//
+
+c.
+create procedure PrecinctsFullLead(in candidate varchar(50))
+begin
+if candidate = 'Trump' 
+then
+select distinct a.precinct from penna a where not exists
+(select * from penna where precinct = a.precinct and Biden > Trump);
+else
+select distinct a.precinct from penna a where not exists
+(select * from penna where precinct = a.precinct and Trump > Biden);
+end if;
+end
+//
+
+d.
+create procedure PlotCandidate(in candidate varchar(50))
+begin
+if candidate = 'Trump'
+then
+select Timestamp, sum(Trump) from penna group by Timestamp order by Timestamp;
+else
+select Timestamp, sum(Biden) from penna group by Timestamp order by Timestamp;
+end if;
+end
+//
+call PlotCandidate('Trump');//
+call PlotCandidate('Biden');//
+
+e
+create procedure PrecinctsWonTownships()
+begin
+select 'Trump' where not exists
+(select * from 
+(select max(Biden) as Biden, max(Trump)as Trump from penna where precinct like '%Township%' 
+group by precinct) as a having sum(Biden) > sum(Trump))
+union
+select 'Biden' where not exists
+(select * from 
+(select max(Biden) as Biden, max(Trump)as Trump from penna where precinct like '%Township%' 
+group by precinct) as a having sum(Trump) > sum(Biden));
+end
+//
+
+3)
+a.
+create procedure TotalVotes(in given_Timestamp datetime, in category varchar(50))
+begin
+if category = 'totalvotes'
+then
+select precinct from penna where Timestamp = given_Timestamp order by totalvotes;
+elseif category = 'Trump'
+then
+select precinct from penna where Timestamp = given_Timestamp order by Trump;
+else
+select precinct from penna where Timestamp = given_Timestamp order by Biden;
+end if;
+end
+//
+
+b.
+create procedure GainDelta(in given_Timestamp datetime)
+begin
+declare prev_Timestamp datetime;
+select Timestamp into prev_Timestamp from penna where Timestamp < given_Timestamp 
+order by Timestamp desc limit 1;
+select unix_timestamp(given_Timestamp)-unix_timestamp(prev_Timestamp) as DELTA, 
+b.given_votes-a.prev_votes as GAIN, 
+(b.given_votes-a.prev_votes)/(unix_timestamp(given_Timestamp)-unix_timestamp(prev_Timestamp)) as ratio from
+(select sum(totalvotes) as prev_votes from penna where Timestamp = prev_Timestamp group by Timestamp) a, 
+(select sum(totalvotes) as given_votes from penna where Timestamp = given_Timestamp group by Timestamp) b;
+end
+//
+
+c.
+drop procedure if exists RankTimestamp;
+create procedure RankTimestamp()
+begin
+create table temp(
+ind int not null,
+Timestamp datetime not null,
+totalvotes int not null
+);
+insert into temp
+select rank() over(order by Timestamp) as 'rank', Timestamp, sum(totalvotes) as totalvotes
+from penna group by Timestamp;
+select a.Timestamp, (b.totalvotes-a.totalvotes)/(unix_timestamp(b.Timestamp)-unix_timestamp(a.Timestamp)) 
+as ratio
+from temp a left join temp b on (a.ind-1) = b.ind
+order by ratio desc;
+drop table temp;
+end
+//
+
+d.
+create procedure VotesPerDay(in day int)
+begin
+select sum(totalvotes) as totalvotes, sum(Biden) as Biden, sum(Trump) as 
+Trump from penna where Timestamp like concat('%', lpad(cast(day as char), 2, 0), '%');
+end
+//
+
+4.
+select * from Penna a, Penna b where a.precinct = b.precinct and a.Timestamp < b.Timestamp and a.totalvotes > b.totalvotes;
+I have found that for some precinctc, the totalvotes decreases with time proceeds like in the earlier timestamp the the totalvotes
+is larger than it is in the later timestamp.
+
+part3
+a.
+select true where not exists (select *
+from penna group by precinct 
+having (max(Biden))+(max(Trump)) > max(totalvotes))
+union 
+select false where exists (select *
+from penna group by precinct 
+having (max(Biden))+(max(Trump)) > max(totalvotes));
+
+b.
+select true where not exists(select * from penna where Timestamp < '2020-11-03 00:00:00' 
+or Timestamp > '2020-11-11 00:00:00')
+union
+select false where exists(select * from penna where Timestamp < '2020-11-03 00:00:00' 
+or Timestamp > '2020-11-11 00:00:00');
+
+c.
+select true where not exists (select * from (select precinct, max(totalvotes) as totalvotes, max(Biden) as Biden, max(Trump) as Trump from penna where 
+Timestamp > '2020-11-05 00:00:00' group by precinct) a, 
+(select precinct, max(totalvotes) as totalvotes, max(Biden) as Biden, max(Trump) as Trump from penna where 
+Timestamp = '2020-11-04 03:51:55' group by precinct) b
+where a.precinct = b.precinct and 
+(a.totalvotes < b.totalvotes or a.Biden < b.Biden or a.Trump < b.Trump))
+union
+select false where exists(select * from (select precinct, max(totalvotes) as totalvotes, max(Biden) as Biden, max(Trump) as Trump from penna where 
+Timestamp > '2020-11-05 00:00:00' group by precinct) a, 
+(select precinct, max(totalvotes) as totalvotes, max(Biden) as Biden, max(Trump) as Trump from penna where 
+Timestamp = '2020-11-04 03:51:55' group by precinct) b
+where a.precinct = b.precinct and 
+(a.totalvotes < b.totalvotes or a.Biden < b.Biden or a.Trump < b.Trump));
+
+part4
+
+create table penna1(
+precinct varchar(80) not null,
+geo varchar(80) not null,
+locality varchar(80) not null,
+state varchar(80) not null,
+primary key (precinct));
+
+create table penna2(
+precinct varchar(80) not null,
+Timestamp datetime not null,
+totalvotes int not null,
+Biden int not null,
+Trump int not null,
+filestamp varchar(80) not null,
+ID int not null,
+foreign key(precinct) references penna1(precinct)
+);
+
+insert into penna1
+select precinct, geo,locality,state
+from penna group by precinct;
+
+insert into penna2 
+select precinct, Timestamp, totalvotes, Biden, Trump, filestamp, ID
+from penna group by precinct, Timestamp;
+
+create procedure modification(in statement varchar(80), in table_name varchar(80))
+begin
+if table_name = 'penna2'
+then
+if statement = 'update' or statement = 'insert'
+then
+select 'statement violates foreign key' as result;
+else
+select 'statement is valid' as result;
+end if;
+else
+select 'statement is valid' as result;
+end if;
+end
+//
+
+4.1
+
+(a)
+create table penna_updatedtuples(
+ID int not null,
+Timestamp datetime not null,
+state varchar(80) not null,
+locality varchar(80) not null,
+precinct varchar(80) not null,
+geo varchar(80) not null,
+totalvotes int not null,
+Biden int not null,
+Trump int not null,
+filestamp varchar(80) not null);
+
+create table penna_insertedtuples(
+ID int not null,
+Timestamp datetime not null,
+state varchar(80) not null,
+locality varchar(80) not null,
+precinct varchar(80) not null,
+geo varchar(80) not null,
+totalvotes int not null,
+Biden int not null,
+Trump int not null,
+filestamp varchar(80) not null);
+
+create table penna_deletedtuples(
+ID int not null,
+Timestamp datetime not null,
+state varchar(80) not null,
+locality varchar(80) not null,
+precinct varchar(80) not null,
+geo varchar(80) not null,
+totalvotes int not null,
+Biden int not null,
+Trump int not null,
+filestamp varchar(80) not null);
+
+create table penna1_updatedtuples(
+precinct varchar(80) not null,
+geo varchar(80) not null,
+locality varchar(80) not null,
+state varchar(80) not null,
+primary key (precinct));
+
+create table penna1_insertedtuples(
+precinct varchar(80) not null,
+geo varchar(80) not null,
+locality varchar(80) not null,
+state varchar(80) not null,
+primary key (precinct));
+
+create table penna1_deletedtuples(
+precinct varchar(80) not null,
+geo varchar(80) not null,
+locality varchar(80) not null,
+state varchar(80) not null,
+primary key (precinct));
+
+create table penna2_updatedtuples(
+precinct varchar(80) not null,
+Timestamp datetime not null,
+totalvotes int not null,
+Biden int not null,
+Trump int not null,
+filestamp varchar(80) not null,
+ID int not null
+);
+
+create table penna2_insertedtuples(
+precinct varchar(80) not null,
+Timestamp datetime not null,
+totalvotes int not null,
+Biden int not null,
+Trump int not null,
+filestamp varchar(80) not null,
+ID int not null
+);
+
+create table penna2_deletedtuples(
+precinct varchar(80) not null,
+Timestamp datetime not null,
+totalvotes int not null,
+Biden int not null,
+Trump int not null,
+filestamp varchar(80) not null,
+ID int not null
+);
+
+drop trigger if exists penna_update;
+create trigger penna_update
+after update on penna
+for each row
+begin
+insert into penna_updatedtuples
+values (old.ID,old.Timestamp,old.state,old.locality,old.precinct,old.geo,
+old.totalvotes,old.Biden,old.Trump,old.filestamp);
+end;
+//
+drop trigger if exists penna_insert;
+create trigger penna_insert
+after insert on penna
+for each row
+begin
+insert into penna_insertedtuples
+values (new.ID,new.Timestamp,new.state,new.locality,new.precinct,new.geo,
+new.totalvotes,new.Biden,new.Trump,new.filestamp);
+end;
+//
+
+drop trigger if exists penna_delete;
+create trigger penna_delete
+after delete on penna
+for each row
+begin
+insert into penna_deletedtuples
+values (old.ID,old.Timestamp,old.state,old.locality,old.precinct,old.geo,
+old.totalvotes,old.Biden,old.Trump,old.filestamp);
+end;
+//
+
+drop trigger if exists penna1_update;
+create trigger penna1_update
+after update on penna1
+for each row
+begin
+insert into penna1_updatedtuples
+values(old.precinct,old.geo,old.locality,old.state);
+end;
+//
+
+drop trigger if exists penna1_insert;
+create trigger penna1_insert
+after insert on penna1
+for each row
+begin
+insert into penna1_insertedtuples
+values(new.precinct,new.geo,new.locality,new.state);
+end;
+//
+
+drop trigger if exists penna1_delete;
+create trigger penna1_delete
+after delete on penna1
+for each row
+begin
+insert into penna1_deletedtuples
+values(old.precinct,old.geo,old.locality,old.state);
+end;
+//
+
+drop trigger if exists penna2_update;
+create trigger penna2_update
+after update on penna2
+for each row
+begin
+insert into penna2_updatedtuples
+values(old.precinct, old.Timestamp,old.totalvotes,old.Biden,old.Trump,old.filestamp,old.ID);
+end;
+//
+
+drop trigger if exists penna2_insert;
+drop trigger if exists penna2_insert;
+create trigger penna2_insert
+after insert on penna2
+for each row
+begin
+insert into penna2_insertedtuples
+values(new.precinct, new.Timestamp,new.totalvotes,new.Biden,new.Trump,new.filestamp,new.ID);
+end;
+//
+
+drop trigger if exists penna2_delete;
+create trigger penna2_delete
+after delete on penna2
+for each row
+begin
+insert into penna2_deletedtuples
+values(old.precinct, old.Timestamp,old.totalvotes,old.Biden,old.Trump,old.filestamp,old.ID);
+end;
+//
+
+4.2
+drop procedure if exists MoveVotes;
+create procedure MoveVotes(in given_precinct varchar(80), in Timest datetime, in CoreCandidate varchar(80)
+, in Number_of_Moved_Votes int)
+begin
+if not exists(select * from penna where Timestamp = Timest) then
+select 'Unknown Timestamp';
+elseif CoreCandidate = 'Trump' then
+if exists(select * from penna where Timestamp = Timest and precinct = given_precinct 
+and Number_of_Moved_Votes > Trump) then
+select 'Not enough votes';
+else
+update penna 
+set Trump = Trump - Number_of_Moved_Votes, Biden = Biden + Number_of_Moved_Votes
+where precinct = given_precinct and Timestamp >= Timest;
+end if;
+elseif CoreCandidate = 'Biden' then
+if exists(select * from penna where Timestamp = Timest and precinct = given_precinct and 
+Number_of_Moved_Votes > Biden) then
+select 'Not enough votes';
+else
+update penna 
+set Trump = Trump + Number_of_Moved_Votes, Biden = Biden - Number_of_Moved_Votes
+where precinct = given_precinct and Timestamp >= Timest;
+end if;
+else select 'Wrong Candidate';
+end if;
+end
+//
+

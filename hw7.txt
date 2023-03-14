@@ -1,0 +1,22 @@
+1.
+1)conflict-serializable
+because T2->T1, T3->T1 but T1->none so there isn't a cycle on the precedence graph.
+equivalent serial schedule:
+S1:T2T3T1
+r1y,r1z,w1z,r3y,w3y,r3x,r1x,r1x,r1z,w1z
+S2:T3T2T1
+r3y,w3y,r3x,r2y,r2z,w2z,r1x,w1x,r1z,w1z
+2)is not conflict-serializable
+because T1->T3, T1->T2, T2->T1, T2->T3 there is a cycle between T1 and T2.
+3)is not conflict-serializable
+because T1->T2, T3  T2->T1. T3->T2, which makes it a cycle between T1,T2 and T3 in the precedence graph.
+2.
+1) This is not possible under 2pl because after the first 4, when reading in T3d, T1 have had D locked, then the read have to unlock D and write
+have to lock D to write, we need to unlock D before T3 locks B, which violates 2pl.
+2) This is not possible under 2pl because when r1D, T1 locks D, and when r3D, T1 have to unlock D and lock B later for the w1B, which violates 2PL.
+3)
+r1D, r3D,w3D,w1B,w1D,r2C,w3B,w2B
+This is also wrong because after locking D in r1D, w3D will unlock D but w1D will lock D again,which violates 2pl.
+3.
+Cabana B remote patron,Old Tavern empty, New Tavern C local patron + D remote patron.
+This is not a serializable schedule because the result will lose A which makes it not serializable.

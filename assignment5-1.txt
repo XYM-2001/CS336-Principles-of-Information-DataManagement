@@ -1,0 +1,86 @@
+1. R=ABCDEGHK,  F= {ABK→C, A→DG, B→K, K→ADH, H→GE}
+{ABK}+ = {A,B,K,C,D,G,H,G,E}
+R1 = A+ = {A,D,G}
+R2 = {A,B,K,C,H,G,E}
+This is not in BCNF since ABK is the super key but A->DG does not have a super key on its lhs which violates bcnf.
+
+2.
+R(ABCDEFG),  F={A -> C, A-> D,  B->F, E->F, F->G}
+F*={A->CD, B->FG, E->FG, F->G}
+A->CD, B->FG, E->FG, F->G
+
+R1 = {A,C,D}
+R2 = {A,B,E}
+R3 = {F,G}
+	
+	A	B	C	D	E	F	G
+R1	a	b1	c	d	e1	f1	g1
+R2	a	b	c1->c	d1->d	e	f2->f	g2->g---loseless
+R3	a1	b2	c2	d2	e2	f	g
+
+ABE is a key for R
+ABE+ = {A,B,E,C,D,F,G}
+The closure of ABE has all the attributes in the scheme.
+
+3.
+R = ABCDEG, AB → D, AB → C, AC → E, B → D, BE → A, E → G.
+R1={ABD}, R2={ACE}, R3={ADEG}
+	A	B	C	D	E	G
+R1	a	b	c1->c	d	e1->e	g1->g---loseless
+R2	a	b1	c	d1	e	g2
+R3	a	b2	c2	d	e	g
+
+4.
+R(ABCD)	F={A->B, C->D, BC->A}
+R1(AB), R2(AC), R3(BCD)
+
+	A	B	C	D
+R1	a	b	c1	d1
+R2	a	b1	c	d2
+R3	a1->a	b	c	d	loseless
+
+5.R(ABCDE), F={A->B, BC->E, and ED->A}. 
+decompose R to R1, R2
+R1 = {A,B}
+R1 is in BCNF
+R2 = R-{B} = {A,C,D,E}
+Since A->B, BC->E
+AC->E, DE->A which violates BCNF
+decompose R2 to R21, R22
+R21{A,C,E}
+AC->E
+R21 is in BCNF
+R22 = R2 - {E} = {A,C,D}
+null
+R22 is in BCNF
+
+6.
+R(ABCDEFGH)	F= {AB->E, C->D, D->E, FG->A}
+F* = {AB->E, C->DE, D->E, FG->A}
+decompose R to R1,R2
+R1 = {A,B,E}
+AB->E
+R1 is in BCNF
+R2 = R-{E} = {A,B,C,D,F,G,H}
+C->D, FG->A which violates BCNF
+decompose R2 to R21, R22
+R21 = {F,G,A}
+FG->A
+R21 is in BCNF
+R22 = R2 - {A} = {B,C,D,F,G,H}
+C->D
+which violates BCNF
+decompose R22 to R221, R222
+R221 = {C,D}
+C->D
+is in BCNF
+R222 = R22 - {D} = {B,C,F,G,H}
+null
+is in BCNF
+
+	A	B	C	D	E	F	G	H
+R1	a	b	c1	d1	e	f1	g1	h1
+R21	a	b1	c1	d2	e2	f	g	h1
+R221	a2	b2	c	d	e4	f2	g2	h3
+R222	a3->a	b	c	d3->d	e5->e	f	g	h---loseless
+

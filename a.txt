@@ -1,0 +1,223 @@
+1.Beers which are not served by Gecko Grill bar
+SELECT DISTINCT beer
+FROM Sells
+WHERE beer NOT IN (SELECT beer FROM Sells WHERE bar = "Gecko Grill");
+
+Hefeweizen Doppelbock
+Original Premium Lager Dog
+Killian's
+Stolichnaya Citrona
+Michelob Amber Bock
+Bud
+
+2.Drinkers who like all beers which Justin likes
+SELECT distinct drinker from Likes 
+where beer in (select beer from Likes where drinker = 'Justin') and not drinker = 'Justin'
+group by drinker having count(beer) >= (select count(drinker) from Likes where drinker = 'Justin');
+
+John
+Mike
+
+3.Pairs of drinkers and bars such that a drinker frequents the bar and the bar serves no beer which the drinker likes
+select distinct a.drinker, a.bar from Frequents a
+where not exists (select bar from Sells where a.bar = bar and beer in
+(select beer from Likes where drinker = a.drinker));
+
+Bob	Blue Angel
+Erik	Blue Angel
+Herb	Blue Angel
+Joe	Blue Angel
+John	Blue Angel
+Justin	Blue Angel
+Rebecca	Blue Angel
+Tom	Blue Angel
+Vince	Blue Angel
+Vince	Cabana
+Joe	Caravan
+Tom	Caravan
+Bob	Coconut Willie's Cocktail Lounge
+Joe	Coconut Willie's Cocktail Lounge
+Rebecca	Coconut Willie's Cocktail Lounge
+Rebecca	Gecko Grill
+Herb	Seven Bamboo
+Vince	Seven Bamboo
+Bob	The Blank Club
+Vince	Club 175
+Joe	Britannia Arms
+Tom	Giza Hookah Lounge
+
+4.Bars which are frequented by neither Justin nor Rebecca
+SELECT DISTINCT bar
+FROM Frequents
+WHERE bar NOT IN (SELECT bar FROM Frequents WHERE drinker = "Justin" OR drinker = "Rebecca");
+
+A.P. Stump's
+Cabana
+The Shark and Rose
+The Blank Club
+Club 175
+Britannia Arms
+Giza Hookah Lounge
+
+5.Drinkers who frequent only these bars which sell beers that they like
+SELECT DISTINCT a.drinker
+FROM Frequents a
+WHERE a.drinker NOT IN (SELECT DISTINCT b.drinker FROM Frequents b
+WHERE NOT EXISTS (SELECT * FROM Sells c, Likes d
+WHERE b.bar=c.bar AND c.beer = d.beer AND b.drinker = d.drinker));
+
+Mike
+Jesse
+
+6.Bars which serve no beer cheaper than $5
+SELECT DISTINCT bar
+FROM Sells
+group by bar
+HAVING MIN(price) >= 5;
+
+A.P. Stump's
+Blue Angel
+Blue Tattoo
+Britannia Arms
+Cabana
+Hedley Club
+The B-Hive
+The Blank Club
+
+7.What is the bar with the highest average price of beer that it sells
+SELECT a.bar
+FROM (SELECT bar, avg(price) AS avg_price FROM Sells GROUP BY bar) AS a
+WHERE a.avg_price IN
+(SELECT MAX(b.avg_price) as max_avg FROM 
+(SELECT avg(price) AS avg_price FROM Sells GROUP BY bar) as b);
+
+Hedley Club
+
+8.Order all bars by the average price of beer that they sell (in descending order)
+SELECT a.bar
+FROM (SELECT bar, avg(price) AS avg_price FROM Sells GROUP BY bar) AS a
+ORDER BY avg_price DESC;
+
+Hedley Club
+Britannia Arms
+Blue Tattoo
+A.P. Stump's
+Blue Angel
+The Blank Club
+Cabana
+The B-Hive
+The Shark and Rose
+Giza Hookah Lounge
+Caravan
+Club 175
+Eulipia
+Gecko Grill
+The Backbeat
+Coconut Willie's Cocktail Lounge
+Seven Bamboo
+
+9.Find all bars whose names consist of more than one word
+SELECT name
+FROM Bars
+WHERE (LENGTH(name) - LENGTH(replace(name, ' ', ''))) >= 1;
+
+A.P. Stump's
+Blue Angel
+Blue Tattoo
+Britannia Arms
+Club 175
+Coconut Willie's Cocktail Lounge
+Gecko Grill
+Giza Hookah Lounge
+Hedley Club
+Il Fornaio
+Seven Bamboo
+The B-Hive
+The Backbeat
+The Blank Club
+The Shark and Rose
+
+10.Which drinker(s) like the most beers
+SELECT drinker
+FROM (select drinker, count(drinker) as like_num from Likes group by drinker) as a
+where a.like_num IN 
+(SELECT MAX(like_num) from 
+(select drinker, count(drinker) as like_num from Likes group by drinker) as b);
+
+Mike
+
+11.Which beer has the highest average price over all bars
+SELECT a.beer
+FROM (SELECT beer, avg(price) AS avg_price FROM Sells GROUP BY beer) AS a
+WHERE a.avg_price IN
+(SELECT MAX(b.avg_price) as max_avg FROM 
+(SELECT avg(price) AS avg_price FROM Sells GROUP BY beer) as b);
+
+Hefeweizen
+
+12.Find bar(s) which charge the smallest price for Budweiser (Bud)
+SELECT a.bar
+FROM (SELECT bar, avg(price) AS avg_price FROM Sells GROUP BY bar) AS a
+WHERE a.avg_price IN
+(SELECT MIN(b.avg_price) as max_avg FROM 
+(SELECT beer,min(price) AS avg_price FROM Sells GROUP BY beer) as b where b.beer = 'Budweiser');
+
+Seven Bamboo
+
+13.Using outer join (left/right - your choice) Find drinkers who do not  frequentany bar which sells Budweiser
+select distinct c.drinker from Frequents c 
+where c.drinker not in (select distinct b.drinker from Frequents b
+right join (select distinct bar from Sells where beer = 'Budweiser') as a
+on b.bar = a.bar);
+
+Erik
+Jesse
+
+14.Using outerjoin find a beer which is not sold by any bar which Mike frequents
+select distinct a.beer from Sells a where a.beer not in (
+select distinct b.beer from Sells b right join
+(select distinct bar from Frequents where drinker = 'Mike') as c
+on b.bar = c.bar);
+
+Killian's
+Stolichnaya Citrona
+Michelob Amber Bock
+Bud
+
+15.Write a query which returns "Yes" if there is any beer which all drinkers like, and "No" otherwise.
+select distinct 'Yes' as 'output'  from Likes where EXISTS(select b.beer 
+from (select beer, count(beer) as count from Likes group by beer) as b
+, (select count(c.drinker) as count from (select distinct drinker from Likes) as c) as a 
+where b.count = a.count)
+UNION 
+select distinct 'No' as 'output'  from Likes where NOT EXISTS(select b.beer 
+from (select beer, count(beer) as count from Likes group by beer) as b
+, (select count(c.drinker) as count from (select distinct drinker from Likes) as c) as a 
+where b.count = a.count);
+
+No
+
+16.Write a query like the one above which either returns such a beer, or if there is no such beer, returns "No such a beer exists".
+select distinct beer  from Likes where EXISTS(select b.beer 
+from (select beer, count(beer) as count from Likes group by beer) as b
+, (select count(c.drinker) as count from (select distinct drinker from Likes) as c) as a 
+where b.count = a.count)
+UNION
+select 'No such beer exists' as beer  from Likes where  NOT EXISTS(select b.beer 
+from (select beer, count(beer) as count from Likes group by beer) as b
+, (select count(c.drinker) as count from (select distinct drinker from Likes) as c) as a 
+where b.count = a.count)
+
+No such beer exists
+
+John	Blue Moon
+John	Bud
+John	Budweiser
+John	Creamy Dark
+John	Killian's
+John	Michelob Golden Draft
+John	Original Premium
+John	Stolichnaya Citrona
+Blue Angel
+Cabana
+Caravan

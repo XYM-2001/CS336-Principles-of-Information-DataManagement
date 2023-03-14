@@ -1,0 +1,147 @@
+#1,2
+R(ID, Timestamp, state, locality, precinct, geo, totalvotes, Biden, Trump, filestamp)
+with fds
+precinct->geo,locality,state
+precinct,Timestamp->totalvotes, Biden, Trump, filestamp which violates BCNF
+decompose R to
+R1(precinct,geo,locality,state)
+with fd precinct->geo,locality,state
+is in BCNF
+and
+R2(precinct, Timestamp,totalvotes, Biden, Trump, filestamp, ID)
+with fd precinct,Timestamp->totalvotes, Biden, Trump, filestamp,ID
+is in BCNF
+
+create table penna1(
+precinct varchar(80) not null,
+geo varchar(80) not null,
+locality varchar(80) not null,
+state varchar(80) not null,
+primary key (precinct));
+
+create table penna2(
+precinct varchar(80) not null,
+Timestamp datetime not null,
+totalvotes int not null,
+Biden int not null,
+Trump int not null,
+filestamp varchar(80) not null,
+ID int not null,
+foreign key(precinct) references penna1(precinct)
+);
+
+create table penna1nofk(
+precinct varchar(80) not null,
+geo varchar(80) not null,
+locality varchar(80) not null,
+state varchar(80) not null,
+primary key (precinct));
+
+create table penna2nofk(
+precinct varchar(80) not null,
+Timestamp datetime not null,
+totalvotes int not null,
+Biden int not null,
+Trump int not null,
+filestamp varchar(80) not null,
+ID int not null
+);
+
+insert into penna1nofk
+select precinct, geo,locality,state
+from penna group by precinct;
+
+insert into penna2nofk
+select precinct, Timestamp, totalvotes, Biden, Trump, filestamp, ID
+from penna group by precinct, Timestamp;
+
+insert into penna1
+select precinct, geo,locality,state
+from penna group by precinct;
+
+insert into penna2 
+select precinct, Timestamp, totalvotes, Biden, Trump, filestamp, ID
+from penna group by precinct, Timestamp;
+
+3.
+select a.precinct from penna2 a where a.precinct not in (select precinct from penna1);
+
+4.
+create trigger cascade_delete
+after delete on penna1nofk
+for each row
+delete from penna2 where penna2.precinct = old.precinct;
+
+5.
+create table VoteChangeLog(
+precinct varchar(80),
+Timestamp datetime,
+oldvote int,
+newvote int,
+candidate varchar(80));
+(a)
+DELIMITER $$
+create trigger
+updatelog
+after update on
+penna2nofk
+for each row
+begin
+if (new.Biden <> old.Biden) then
+insert into VoteChangeLog
+values(new.precinct,new.Timestamp, old.Biden, new.Biden, 'Biden');
+end if;
+if (new.Trump <> old.Trump)
+then
+insert into VoteChangeLog
+values(new.precinct,new.Timestamp, old.Trump, new.Trump, 'Trump');
+end if;
+end; $$
+
+(b)
+delimiter //
+
+create table temp(
+precinct varchar(80) not null,
+Timestamp datetime not null,
+totalvotes int not null,
+Biden int not null,
+Trump int not null,
+filestamp varchar(80) not null,
+ID int not null
+);
+create trigger update_penna
+before update on penna2nofk
+for each row
+begin
+if(new.Biden <> old.Biden) then
+insert into temp (precinct, Timestamp, totalvotes, Biden, Trump, filestamp, ID)
+select precinct, Timestamp, totalvotes, Biden + (new.Biden-old.Biden), Trump - (new.Biden-old.Biden), filestamp, ID
+from penna2nofk where Timestamp > new.Timestamp and precinct = new.precinct;
+insert into temp (precinct, Timestamp, totalvotes, Biden, Trump, filestamp, ID)
+select precinct, Timestamp, totalvotes, Biden, Trump - (new.Biden-old.Biden), filestamp, ID
+from penna2nofk where Timestamp = new.Timestamp and precinct = new.precinct;
+delete from penna2nofk
+where Timestamp >= new.Timestamp and precinct = new.precinct;
+insert into penna2nofk
+select *
+from temp;
+delete from temp;
+end if;
+if(new.Trump <> old.Trump) then
+insert into temp (precinct, Timestamp, totalvotes, Biden, Trump, filestamp, ID)
+select precinct, Timestamp, totalvotes, Biden - (new.Trump-old.Trump), Trump + (new.Trump-old.Trump), filestamp, ID
+from penna2nofk where Timestamp > new.Timestamp and precinct = new.precinct;
+insert into temp (precinct, Timestamp, totalvotes, Biden, Trump, filestamp, ID)
+select precinct, Timestamp, totalvotes, Biden - (new.Trump-old.Trump), Trump, filestamp, ID
+from penna2nofk where Timestamp = new.Timestamp and precinct = new.precinct;
+delete from penna2nofk
+where Timestamp >= new.Timestamp and precinct = new.precinct;
+insert into penna2nofk
+select *
+from temp;
+delete from temp;
+end if;
+end; 
+//
+delimiter ;

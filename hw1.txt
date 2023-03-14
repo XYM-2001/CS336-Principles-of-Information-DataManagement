@@ -1,0 +1,64 @@
+Query 1
+SELECT DISTINCT beer FROM Sells
+WHERE beer != 'Hefeweizen' AND beer IN (SELECT beer FROM Sells WHERE Sells.bar = 'Gecko Grill');
+Budweiser
+
+Query 2
+SELECT DISTINCT drinker FROM Likes WHERE beer 
+IN (SELECT beer FROM Likes WHERE drinker = 'Justin') AND drinker != 'Justin';
+John
+Mike
+
+Query 3
+SELECT DISTINCT a.drinker,b.bar FROM Frequents  a, Sells b, Likes c 
+WHERE a.drinker = c.drinker
+AND c.beer = b.beer
+AND a.bar = b.bar;
+Mike	A.P. Stump's
+Jesse	Blue Angel
+Mike	Blue Angel
+John	Cabana
+Mike	Cabana
+John	Caravan
+Justin	Gecko Grill
+Mike	The Shark and Rose
+Justin	Caravan
+Justin	Seven Bamboo
+
+Query 4
+SELECT a.bar FROM Frequents a WHERE a.drinker IN ('Justin','Rebecca')
+ GROUP BY a.bar HAVING COUNT(DISTINCT a.drinker) < 2;
+Caravan
+Coconut Willie's Cocktail Lounge
+Seven Bamboo
+
+Query 5
+SELECT DISTINCT a.drinker FROM Frequents a, Sells b, Likes c
+WHERE a.bar = b.bar AND b.beer = c.beer AND c.drinker = a.drinker;
+Mike
+Jesse
+John
+Justin
+
+Query 6
+SELECT DISTINCT a.bar FROM Sells a, Likes b
+WHERE b.drinker IN ('John', 'Rebecca') AND b.beer = a.beer AND a.price < 5;
+Club 175
+Coconut Willie's Cocktail Lounge
+Gecko Grill
+Giza Hookah Lounge
+Seven Bamboo
+The Backbeat
+The Shark and Rose
+
+Query 7
+SELECT DISTINCT a.drinker FROM Likes a WHERE a.beer = 'Hefeweizen' AND 
+a.drinker IN (SELECT drinker FROM Likes WHERE beer = "Killian's");
+Mike
+
+Query 8
+SELECT DISTINCT name FROM Bars WHERE name LIKE '%The%';
+The B-Hive
+The Backbeat
+The Blank Club
+The Shark and Rose

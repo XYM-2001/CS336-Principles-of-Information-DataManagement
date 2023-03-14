@@ -1,0 +1,128 @@
+#1
+select Timestamp from Penna
+group by Timestamp
+having sum(Biden) - sum(Trump) >= 100000
+order by Timestamp asc
+limit 1;
+
+2020-11-04 07:08:18
+
+#2
+select Timestamp, precinct from Penna
+where Timestamp = (select min(Timestamp) from 
+(select Timestamp from Penna where totalvotes > 0) as a) and totalvotes <> 0;
+
+86rows returned
+
+#3
+select precinct from (select precinct, abs(max(Biden) - max(Trump)) votediff 
+from Penna
+group by precinct)as a where votediff = (select min(votediff) from (select precinct, abs(max(Biden) - max(Trump)) votediff 
+from Penna
+group by precinct) as b);
+
+LOWER SWATARA TWP--3RD PRECINCT
+Pottstown 7-2
+
+#4
+select Timestamp, from(
+select Timestamp, ABS(sum(Biden) - sum(Trump)) as votediff from Penna group by Timestamp) as a 
+where votediff = (select max(votediff) from (select Timestamp, ABS(sum(Biden) - sum(Trump)) as votediff from Penna group by Timestamp) as b);
+
+2020-11-10 21:30:56
+2020-11-10 21:45:52
+
+#5
+select Timestamp t, sum(Biden) totalvoteB, sum(Trump) totalvoteT
+from Penna
+group by Timestamp
+having totalvoteB < totalvoteT and Timestamp > '2020-11-05 00:00:00';
+
+0 rows returned
+
+#6
+select 'Biden' winner, sum(B),sum(T) from (
+select max(Biden) B, max(Trump) T, precinct from Penna group by precinct having precinct like '%Township%') as a
+where precinct like '%Township%' having sum(B) > sum(T)
+union
+select 'Trump' winner, sum(B),sum(T) from (
+select max(Biden) B, max(Trump) T, precinct from Penna group by precinct having precinct like '%Township%') as a
+where precinct like '%Township%' having sum(B) < sum(T);
+
+Trump	28655	47476
+
+select 'Biden' winner, sum(B),sum(T) from (
+select max(Biden) B, max(Trump) T, precinct from Penna group by precinct having precinct like '%Borough%') as a
+where precinct like '%Borough%' having sum(B) > sum(T)
+union
+select 'Trump' winner, sum(B),sum(T) from (
+select max(Biden) B, max(Trump) T, precinct from Penna group by precinct having precinct like '%Borough%') as a
+where precinct like '%Borough%' having sum(B) < sum(T);
+
+Trump	15977	23574
+
+select 'Biden' winner, sum(B),sum(T) from (
+select max(Biden) B, max(Trump) T, precinct from Penna group by precinct having precinct like '%Ward%') as a
+where precinct like '%Ward%' having sum(B) > sum(T)
+union
+select 'Trump' winner, sum(B),sum(T) from (
+select max(Biden) B, max(Trump) T, precinct from Penna group by precinct having precinct like '%Ward%') as a
+where precinct like '%Ward%' having sum(B) < sum(T);
+
+Biden	73348	40137
+
+#7
+select 'Biden' winner, sum(B) finalvotes from 
+(select max(Biden) B, max(Trump) T from Penna group by precinct) as a 
+having sum(B) > sum(T)
+union
+select 'Biden' winner, sum(B) finalvotes from 
+(select max(Biden) B, max(Trump) T from Penna group by precinct) as a 
+having sum(T) > sum(B);
+
+Biden	1350914
+
+select 'Biden' winner, sum(B) finalvotes from 
+(select max(Biden) B, max(Trump) T from 
+(select Biden, Trump, precinct from Penna where Timestamp like '2020-11-04%')as b
+group by precinct) as a 
+having sum(B) > sum(T)
+union
+select 'Biden' winner, sum(B) finalvotes from 
+(select max(Biden) B, max(Trump) T from 
+(select Biden, Trump, precinct from Penna where Timestamp like '2020-11-04%')as b
+group by precinct) as a 
+having sum(T) > sum(B);
+
+Biden	1151714
+
+select 'Biden' winner, sum(a.B)-sum(b.B) finalvotes from (select max(Trump) T, max(Biden) B from 
+(select Biden,Trump, precinct from Penna where Timestamp like '2020-11-11%')as z
+group by precinct) as a, (select max(Trump) T, max(Biden) B from 
+(select Biden,Trump, precinct from Penna where Timestamp like '2020-11-10%')as z
+group by precinct) as b having (sum(a.B)-sum(b.B)) > (sum(a.T)-sum(b.T))
+union
+select 'Trump' winner, sum(a.T)-sum(b.T) finalvotes from (select max(Trump) T, max(Biden) B from 
+(select Biden,Trump, precinct from Penna where Timestamp like '2020-11-11%')as z
+group by precinct) as a, (select max(Trump) T, max(Biden) B from 
+(select Biden,Trump, precinct from Penna where Timestamp like '2020-11-10%')as z
+group by precinct) as b having (sum(a.B)-sum(b.B)) < (sum(a.T)-sum(b.T));
+
+Biden	929591
+
+#8
+select distinct count(*) from (
+select precinct from Penna
+group by precinct
+having max(Trump) > max(Biden)) as a;
+
+691
+
+#9
+select Timestamp, max(totalvotes) totalvotes from Penna
+group by Timestamp
+having max(totalvotes) = 0;
+
+2020-11-03 19:39:48	0
+2020-11-03 19:47:21	0
+2020-11-04 01:02:56	0

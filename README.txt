@@ -1,0 +1,3 @@
+In the plots, since I didn't import the full penna table, the plot might have a decrease of value but it is due to the typo in the table.
+For the firt task in part4, since the wording is so unclear, in my understanding, it is asking me to check if the statement will
+succeed under different circumstances. My demo video showed the different scenarios, which either passed the check or failed the check.

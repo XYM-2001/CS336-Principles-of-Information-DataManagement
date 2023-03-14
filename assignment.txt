@@ -1,0 +1,194 @@
+#1
+select Timestamp from Penna_fully_sorted
+group by Timestamp
+having sum(Biden) - sum(Trump) >= 100000
+order by Timestamp asc
+limit 1;
+
+2020-11-04 07:08:18
+
+#2
+select Timestamp, precinct from Penna_fully_sorted
+where Timestamp = (select min(Timestamp) from 
+(select Timestamp from Penna_fully_sorted where totalvotes > 0) as a) and totalvotes <> 0;
+
+2020-11-04 01:11:32	BELLEFONTE NORTH
+2020-11-04 01:11:32	BELLEFONTE NORTHEAST
+2020-11-04 01:11:32	BELLEFONTE SOUTH
+2020-11-04 01:11:32	BELLEFONTE SOUTHEAST
+2020-11-04 01:11:32	BELLEFONTE WEST
+2020-11-04 01:11:32	BENNER NORTH
+2020-11-04 01:11:32	BENNER SOUTH
+2020-11-04 01:11:32	BOGGS EAST
+2020-11-04 01:11:32	BOGGS WEST
+2020-11-04 01:11:32	BURNSIDE
+2020-11-04 01:11:32	CENTRE HALL
+2020-11-04 01:11:32	COLLEGE EAST
+2020-11-04 01:11:32	COLLEGE NORTH
+2020-11-04 01:11:32	COLLEGE SOUTH
+2020-11-04 01:11:32	COLLEGE WEST
+2020-11-04 01:11:32	CURTIN SOUTH
+2020-11-04 01:11:32	FERGUSON EAST
+2020-11-04 01:11:32	FERGUSON NORTH 1
+2020-11-04 01:11:32	FERGUSON NORTH 2
+2020-11-04 01:11:32	FERGUSON NORTH 3
+2020-11-04 01:11:32	FERGUSON NORTH CENTRAL
+2020-11-04 01:11:32	FERGUSON NORTHEAST 1 (49-1)
+2020-11-04 01:11:32	FERGUSON NORTHEAST 2
+2020-11-04 01:11:32	FERGUSON WEST
+2020-11-04 01:11:32	FERGUSON WEST CENTRAL
+2020-11-04 01:11:32	GREGG
+2020-11-04 01:11:32	HAINES
+2020-11-04 01:11:32	HALFMOON EAST CENTRAL
+2020-11-04 01:11:32	HALFMOON PROPER
+2020-11-04 01:11:32	HARRIS EAST
+2020-11-04 01:11:32	HARRIS WEST
+2020-11-04 01:11:32	HOWARD BORO
+2020-11-04 01:11:32	HOWARD TWP
+2020-11-04 01:11:32	HUSTON
+2020-11-04 01:11:32	LIBERTY
+2020-11-04 01:11:32	MARION
+2020-11-04 01:11:32	MILES EAST
+2020-11-04 01:11:32	MILES WEST
+2020-11-04 01:11:32	MILESBURG
+2020-11-04 01:11:32	MILLHEIM
+2020-11-04 01:11:32	PATTON NORTH 1
+2020-11-04 01:11:32	PATTON NORTH 2
+2020-11-04 01:11:32	PATTON SOUTH 1
+2020-11-04 01:11:32	PATTON SOUTH 2
+2020-11-04 01:11:32	PATTON SOUTH 3
+2020-11-04 01:11:32	PENN
+2020-11-04 01:11:32	PHILIPSBURG 1ST WARD
+2020-11-04 01:11:32	PHILIPSBURG 2ND WARD
+2020-11-04 01:11:32	PHILIPSBURG 3RD WARD
+2020-11-04 01:11:32	PORT MATILDA
+2020-11-04 01:11:32	POTTER NORTH
+2020-11-04 01:11:32	POTTER SOUTH
+2020-11-04 01:11:32	PSU
+2020-11-04 01:11:32	RUSH EAST
+2020-11-04 01:11:32	RUSH NORTH
+2020-11-04 01:11:32	RUSH NORTH CENTRAL
+2020-11-04 01:11:32	RUSH SOUTH
+2020-11-04 01:11:32	RUSH WEST
+2020-11-04 01:11:32	SNOW SHOE
+2020-11-04 01:11:32	SNOW SHOE EAST
+2020-11-04 01:11:32	SNOW SHOE WEST
+2020-11-04 01:11:32	SPRING EAST
+2020-11-04 01:11:32	SPRING NORTH
+2020-11-04 01:11:32	SPRING SOUTH
+2020-11-04 01:11:32	SPRING SOUTHWEST
+2020-11-04 01:11:32	SPRING WEST
+2020-11-04 01:11:32	STATE COLLEGE EAST 3
+2020-11-04 01:11:32	STATE COLLEGE EAST CENTRAL 2
+2020-11-04 01:11:32	STATE COLLEGE EAST CENTRAL 3
+2020-11-04 01:11:32	STATE COLLEGE NORTH
+2020-11-04 01:11:32	STATE COLLEGE NORTHEAST
+2020-11-04 01:11:32	STATE COLLEGE NORTHWEST
+2020-11-04 01:11:32	STATE COLLEGE SOUTH 1
+2020-11-04 01:11:32	STATE COLLEGE SOUTH 2
+2020-11-04 01:11:32	STATE COLLEGE SOUTH CENTRAL 1
+2020-11-04 01:11:32	STATE COLLEGE SOUTH CENTRAL 2
+2020-11-04 01:11:32	STATE COLLEGE SOUTHEAST
+2020-11-04 01:11:32	STATE COLLEGE WEST 1
+2020-11-04 01:11:32	STATE COLLEGE WEST 2
+2020-11-04 01:11:32	STATE COLLEGE WEST CENTRAL 2
+2020-11-04 01:11:32	TAYLOR
+2020-11-04 01:11:32	UNION
+2020-11-04 01:11:32	UNIONVILLE
+2020-11-04 01:11:32	WALKER EAST
+2020-11-04 01:11:32	WALKER WEST
+2020-11-04 01:11:32	WORTH
+
+#3
+select precinct from (select precinct, abs(max(Biden) - max(Trump)) votediff 
+from Penna_fully_sorted
+group by precinct)as a where votediff = (select min(votediff) from (select precinct, abs(max(Biden) - max(Trump)) votediff 
+from Penna_fully_sorted
+group by precinct) as b);
+
+LOWER SWATARA TWP--3RD PRECINCT
+Morris Voting Precinct
+Pottstown 7-2
+
+#4
+select Timestamp, from(
+select Timestamp, ABS(sum(Biden) - sum(Trump)) as votediff from Penna_fully_sorted group by Timestamp) as a 
+where votediff = (select max(votediff) from (select Timestamp, ABS(sum(Biden) - sum(Trump)) as votediff from Penna_fully_sorted group by Timestamp) as b);
+
+2020-11-10 21:30:56
+2020-11-10 21:45:52
+
+#5
+select Timestamp t, sum(Biden) totalvoteB, sum(Trump) totalvoteT
+from Penna_fully_sorted
+group by Timestamp
+having totalvoteB < totalvoteT;
+
+0 rows returned
+
+#6
+select 'Biden' winner, sum(B),sum(T) from (
+select max(Biden) B, max(Trump) T, precinct from Penna_fully_sorted group by precinct having precinct like '%Township%') as a
+where precinct like '%Township%' having sum(B) > sum(T)
+union
+select 'Trump' winner, sum(B),sum(T) from (
+select max(Biden) B, max(Trump) T, precinct from Penna_fully_sorted group by precinct having precinct like '%Township%') as a
+where precinct like '%Township%' having sum(B) < sum(T);
+
+Trump	28655	47476
+
+#7
+select 'Biden' winner, sum(B) finalvotes from 
+(select max(Biden) B, max(Trump) T from Penna_fully_sorted group by precinct) as a 
+having sum(B) > sum(T)
+union
+select 'Biden' winner, sum(B) finalvotes from 
+(select max(Biden) B, max(Trump) T from Penna_fully_sorted group by precinct) as a 
+having sum(T) > sum(B);
+
+Biden	1350914
+
+select 'Biden' winner, sum(B) finalvotes from 
+(select max(Biden) B, max(Trump) T from 
+(select Biden, Trump, precinct from Penna_fully_sorted where Timestamp like '2020-11-04%')as b
+group by precinct) as a 
+having sum(B) > sum(T)
+union
+select 'Biden' winner, sum(B) finalvotes from 
+(select max(Biden) B, max(Trump) T from 
+(select Biden, Trump, precinct from Penna_fully_sorted where Timestamp like '2020-11-04%')as b
+group by precinct) as a 
+having sum(T) > sum(B);
+
+Biden	1151714
+
+select 'Biden' winner, sum(a.B)-sum(b.B) finalvotes from (select max(Trump) T, max(Biden) B from 
+(select Biden,Trump, precinct from Penna_fully_sorted where Timestamp like '2020-11-11%')as z
+group by precinct) as a, (select max(Trump) T, max(Biden) B from 
+(select Biden,Trump, precinct from Penna_fully_sorted where Timestamp like '2020-11-10%')as z
+group by precinct) as b having (sum(a.B)-sum(b.B)) > (sum(a.T)-sum(b.T))
+union
+select 'Trump' winner, sum(a.T)-sum(b.T) finalvotes from (select max(Trump) T, max(Biden) B from 
+(select Biden,Trump, precinct from Penna_fully_sorted where Timestamp like '2020-11-11%')as z
+group by precinct) as a, (select max(Trump) T, max(Biden) B from 
+(select Biden,Trump, precinct from Penna_fully_sorted where Timestamp like '2020-11-10%')as z
+group by precinct) as b having (sum(a.B)-sum(b.B)) < (sum(a.T)-sum(b.T));
+
+Biden	929591
+
+#8
+select distinct count(*) from (
+select precinct from Penna_fully_sorted
+group by precinct
+having max(Trump) > max(Biden)) as a;
+
+691
+
+#9
+select Timestamp, max(totalvotes) totalvotes from Penna_fully_sorted
+group by Timestamp
+having max(totalvotes) = 0;
+
+2020-11-03 19:39:48	0
+2020-11-03 19:47:21	0
+2020-11-04 01:02:56	0

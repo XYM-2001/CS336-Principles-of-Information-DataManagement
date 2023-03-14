@@ -1,0 +1,60 @@
+3.
+restaurant->rank,score
+
+select 'true' where not exists(
+select * from tripadvisor t, tripadvisor s
+where t.RESTAURANT = s.RESTAURANT AND
+(t.RANK <> S.RANK OR t.SCORE <> s.SCORE))
+union
+select 'false' where exists(
+select * from tripadvisor t, tripadvisor s
+where t.RESTAURANT = s.RESTAURANT AND
+(t.RANK <> S.RANK OR t.SCORE <> s.SCORE))
+
+user_name, review_date, restaurant->user_reviews, user_restaurant_reviews, user_helpful_votes, review_stars
+
+select 'true' where not exists(
+select distinct * from tripadvisor t, tripadvisor s
+where t.USER_NAME = s.USER_NAME and t.REVIEW_DATE = s.REVIEW_DATE and t.RESTAURANT = s.RESTAURANT and (t.USER_REVIEWS <> s.USER_REVIEWS
+or t.USER_RESTAURANT_REVIEWS <> s.USER_RESTAURANT_REVIEWS
+or t.USER_HELPFUL_VOTES <> s.USER_HELPFUL_VOTES or t.REVIEW_STARS <> s.REVIEW_STARS))
+union
+select 'false' where exists(
+select distinct * from tripadvisor t, tripadvisor s
+where t.USER_NAME = s.USER_NAME and t.REVIEW_DATE = s.REVIEW_DATE and t.RESTAURANT = s.RESTAURANT and (t.USER_REVIEWS <> s.USER_REVIEWS
+or t.USER_RESTAURANT_REVIEWS <> s.USER_RESTAURANT_REVIEWS
+or t.USER_HELPFUL_VOTES <> s.USER_HELPFUL_VOTES or t.REVIEW_STARS <> s.REVIEW_STARS));
+
+A->BC
+ADF->EGHI
+
+4.
+the table tripadvisor is not in bcnf because the restaurant determines the rank and score but it cannot determine user_name, review_date, user_reviews
+, user_restaurant_reviews, user_helpful_votes and review_stars;
+
+5.
+create table restaurant as
+select RESTAURANT, tripadvisor.RANK, SCORE
+from tripadvisor
+group by RESTAURANT;
+
+create table userreview as
+select USER_NAME, REVIEW_DATE, RESTAURANT, USER_REVIEWS, USER_RESTAURANT_REVIEWS,
+USER_HELPFUL_VOTES, REVIEW_STARS
+from tripadvisor;
+
+6.
+create table joinedtable as 
+select userreview.RESTAURANT, restaurant.RANK, restaurant.SCORE, userreview.USER_NAME, 
+userreview.REVIEW_STARS, userreview.REVIEW_DATE, userreview.USER_REVIEWS,
+userreview.USER_RESTAURANT_REVIEWS, userreview.USER_HELPFUL_VOTES from userreview
+join restaurant
+on restaurant.restaurant = userreview.restaurant;
+
+select * from joinedtable
+union
+select * from tripadvisor;
+
+The joined table is the combination of the two table created in 5.
+There are 6355 rows in tripadvisor with the tuples with user_name '0' deleted, 2 of them has duplicates so 6353 distinct rows.
+6353 row returned which is equal to the total rows in tripadvisor so that the two tables are identical.
